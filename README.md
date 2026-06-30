@@ -29,3 +29,27 @@ Para o trânsito pesado de dados entre o chão de fábrica e os sistemas corpora
 
 Por que é o mais adequado? 
 Em um ambiente logístico, você tem centenas de máquinas enviando vibração a cada segundo. O padrão Publish/Subscribe do MQTT desacopla quem gera a informação de quem a consome . O gateway apenas "publica" o dado em um tópico, sem se importar com quantas APIs internas o estão escutando.
+
+Comparativo Rápido
+
+| Protocolo | Comportamento no Cenário | Avaliação para Telemetria|  
+| MQTT | Assíncrono, Pub/Sub, TCP leve, retenção de mensagens. | Excelente. Resiliente a quedas da VPN. | 
+| HTTP | Síncrono, Request/Response, cabeçalhos pesados. | Ruim. Consome muita banda e não escala bem para fluxo contínuo de sensores. | 
+| CoAP | UDP, focado em baixo consumo e redes restritas.Inadequado via WAN. | Excelente localmente, mas perde confiabilidade de entrega crítica via túnel longo de VPN. |
+| MCP | Orquestração de contexto e execução de ferramentas. | Inadequado para telemetria. Ideal apenas para a camada de inteligência e regras de negócio.| 
+
+Benefícios Diretos do MQTT  
+- Segurança: Suporta TLS embarcado, adicionando uma segunda camada de criptografia além da VPN.
+- Desempenho: O cabeçalho de um pacote MQTT tem apenas 2 bytes, economizando largura de banda da rede corporativa.
+- Escalabilidade: Adicionar um novo dashboard para ler os sensores exige zero alteração no gateway; basta assinar o tópico MQTT existente.
+- Manutenção: Os tópicos organizam logicamente o sistema (ex: logistica/esteiras/temp).
+
+ ### Controle de Acesso via VPN
+ Bloqueio por Desenho de Rede
+ As APIs não podem ser acessadas de fora da VPN porque elas não existem na internet pública. Elas não possuem um IP público roteável. O servidor onde estão hospedadas responde apenas a IPs da sub-rede privada. 
+ 
+ O que acontece em uma tentativa externa?
+ Se um serviço de nuvem de terceiros, sem estar na VPN, tentar bater no IP da sua API (mesmo que descubra o IP interno), a requisição sofrerá um Timeout ou Destination Host Unreachable. O roteador da operadora de internet simplesmente descarta o pacote na Camada 3 do modelo OSI, pois IPs privados não trafegam na internet pública.
+ 
+ Aumento Holístico da Segurança
+ A VPN consolida a superfície de ataque. Em vez de proteger dezenas de rotas e portas de APIs diferentes na web contra injeção de SQL ou ataques de negação de serviço (DDoS), a empresa defende um único "portão" fortemente blindado: o concentrador VPN, geralmente protegido por autenticação multifator (MFA) e certificados digitais emitidos individualmente por dispositivo.
